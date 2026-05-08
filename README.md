@@ -1,5 +1,20 @@
 # RL Rubik's Cube solver
 
+
+## Overview
+A reinforcement learning agent that learns to solve the Rubik's Cube 
+with no encoded solving strategy. Given only the valid moveset, it 
+learns entirely through experience.
+
+The 2x2 is fully solved, with a network that generalises to scrambles 
+it has never seen before, trained on my laptop. The approach 
+generalises to the 3x3, with performance limited by hardware memory 
+constraints.
+
+A custom guidance algorithm combining elements of MCTS and heuristic
+tree search is used to address the sparse reward problem inherent to the 
+environment.
+
 ## Requirements
  
 - Python 3.10+
