@@ -1,4 +1,4 @@
-# Final Year Project
+# RL Rubik's Cube solver
 
 ## Requirements
  
