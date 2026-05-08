@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 22px;
+            color: #ddd;
+        }
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .tab-btn {
+            padding: 10px 28px;
+            font-size: 15px;
+            cursor: pointer;
+            background: #333;
+            color: #aaa;
+            border: 1px solid #555;
+            border-radius: 4px;
+        }
+        .tab-btn.active {
+            background: #2a6;
+            color: white;
+            border-color: #2a6;
+        }
+        .tab-btn:hover:not(.active) { background: #444; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .chart-card {
+            background: #222;
+            border: 1px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .chart-card:hover { border-color: #555; }
+        .chart-card h3 {
+            padding: 10px 14px;
+            font-size: 13px;
+            color: #aaa;
+            background: #2a2a2a;
+            border-bottom: 1px solid #333;
+        }
+        .chart-card img {
+            width: 100%;
+            display: block;
+        }
+        .hint {
+            text-align: center;
+            font-size: 12px;
+            color: #555;
+            margin-bottom: 16px;
+        }
+
+        /* Lightbox */
+        #lightbox {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+        #lightbox.active { display: flex; }
+        #lightbox img {
+            max-width: 90vw;
+            max-height: 90vh;
+            border-radius: 6px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.8);
+        }
+        #lightbox-close {
+            position: fixed;
+            top: 16px;
+            right: 24px;
+            font-size: 32px;
+            color: #aaa;
+            cursor: pointer;
+            line-height: 1;
+        }
+        #lightbox-close:hover { color: white; }
+    </style>
+</head>
+<body>
+    <h1>Training Results</h1>
+    <p class="hint">Click any chart to enlarge</p>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="showTab('2x2', event)">2×2 Cube</button>
+        <button class="tab-btn" onclick="showTab('3x3', event)">3×3 Cube</button>
+    </div>
+
+    <div id="tab-2x2" class="tab-content active">
+        <div class="chart-grid" id="grid-2x2"></div>
+    </div>
+
+    <div id="tab-3x3" class="tab-content">
+        <div class="chart-grid" id="grid-3x3"></div>
+    </div>
+
+    <!-- Lightbox -->
+    <div id="lightbox" onclick="closeLightbox()">
+        <span id="lightbox-close">✕</span>
+        <img id="lightbox-img" src="" alt="">
+    </div>
+
+    <script>
+        function showTab(name, event) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + name).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function openLightbox(src) {
+            document.getElementById('lightbox-img').src = src;
+            document.getElementById('lightbox').classList.add('active');
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox').classList.remove('active');
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closeLightbox();
+        });
+
+        function addChart(gridId, label, imgPath) {
+            const grid = document.getElementById(gridId);
+            const card = document.createElement('div');
+            card.className = 'chart-card';
+            card.innerHTML = `
+                <h3>${label}</h3>
+                <img src="${imgPath}" alt="${label}" onerror="this.parentElement.style.display='none'">
+            `;
+            card.addEventListener('click', () => openLightbox(imgPath));
+            grid.appendChild(card);
+        }
+
+        // 2x2 charts: cp01 to cp14
+        for (let i = 1; i <= 14; i++) {
+            const label = `Checkpoint ${i}`;
+            const num = String(i).padStart(2, '0');
+            addChart('grid-2x2', label, `charts_2x2/cp${num}_solve_rate.png`);
+        }
+
+        // 3x3 charts: cp01 to cp09 + retrain
+        for (let i = 1; i <= 9; i++) {
+            const label = `Checkpoint ${i}`;
+            const num = String(i).padStart(2, '0');
+            addChart('grid-3x3', label, `charts_3x3/cp${num}_solve_rate.png`);
+        }
+        addChart('grid-3x3', 'Depth 7 Retrain', 'charts_3x3/cpretrain_solve_rate.png');
+    </script>
+</body>
+</html>

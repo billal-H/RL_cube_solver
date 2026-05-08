@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="/eel.js"></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        #cube-container { margin: 20px 0; }
+        .move-group { 
+            display: flex; 
+            gap: 8px; 
+            margin: 4px 0; 
+        }
+        button {
+            padding: 8px 14px;
+            font-size: 14px;
+            cursor: pointer;
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 4px;
+        }
+        button:hover { background: #444; }
+        #controls { margin-top: 10px; display: flex; gap: 10px; }
+        #solve-btn { background: #2a6; }
+        #reset-btn { background: #a33; }
+        #status { margin-top: 10px; font-size: 14px; color: #aaa; }
+        #menu-btn {position: fixed;top: 16px;right: 16px;padding: 8px 12px;background: #333;color: white;border: 1px solid #555;border-radius: 4px;cursor: pointer;font-size: 18px;}
+        #menu-btn:hover { background: #444; }
+        </style>
+</head>
+<body>
+    <button id="menu-btn" onclick="window.open('results.html', '_blank')">☰</button>
+
+    <h2>Rubik's Cube Solver</h2>
+    <div id="cube-container"></div>
+
+        <div class="move-group">
+            <button onclick="doMove('U')">U</button>
+            <button onclick="doMove('U_')">U'</button>
+            <button onclick="doMove('D')">D</button>
+            <button onclick="doMove('D_')">D'</button>
+            <button onclick="doMove('R')">R</button>
+            <button onclick="doMove('R_')">R'</button>
+            <button onclick="doMove('L')">L</button>
+            <button onclick="doMove('L_')">L'</button>
+            <button onclick="doMove('F')">F</button>
+            <button onclick="doMove('F_')">F'</button>
+            <button onclick="doMove('B')">B</button>
+            <button onclick="doMove('B_')">B'</button>
+        </div>
+        <div class="move-group" id="slice-buttons">
+            <button onclick="doMove('M')">M</button>
+            <button onclick="doMove('M_')">M'</button>
+            <button onclick="doMove('E')">E</button>
+            <button onclick="doMove('E_')">E'</button>
+            <button onclick="doMove('S')">S</button>
+            <button onclick="doMove('S_')">S'</button>
+        </div>
+
+    <div id="controls">
+        <button id="solve-btn" onclick="solve()">Solve</button>
+        <button id="reset-btn" onclick="reset()">Reset</button>
+        <button id="toggle-btn" onclick="togglePuzzle()">Switch to 2x2</button>
+
+    </div>
+        <div id="scramble-controls">
+        <input type="number" id="scramble-depth" value="10" min="1" max="25" style="width: 60px; padding: 8px; background: #333; color: white; border: 1px solid #555; border-radius: 4px; font-size: 14px;">
+        <button onclick="scramble()">Scramble</button>
+    </div>
+    <div id="manual-input" style="display: flex; gap: 8px; margin: 8px 0;">
+        <input type="text" id="move-input" placeholder="e.g. R U R' F L D'" 
+            style="width: 300px; padding: 8px; background: #333; color: white; 
+                border: 1px solid #555; border-radius: 4px; font-size: 14px;">
+        <button onclick="applyMoveSequence()">Apply</button>
+    </div>
+    <div id="status">Ready</div>
+
+    <script type="module">
+        import { TwistyPlayer } from "./cubing.min.js";
+
+        const player = new TwistyPlayer({
+            puzzle: "3x3x3",
+            background: "none",
+            controlPanel: "none",
+        });
+        player.style.width = "300px";
+        player.style.height = "300px";
+        document.getElementById("cube-container").appendChild(player);
+
+        let moves = [];
+        let currentPuzzle = "3x3x3";
+        let cancelled = false; 
+
+        
+        window.togglePuzzle = function() {
+            currentPuzzle = currentPuzzle === "3x3x3" ? "2x2x2" : "3x3x3";
+            player.puzzle = currentPuzzle;
+            moves = [];
+            player.alg = "";
+            document.getElementById("toggle-btn").textContent = 
+                currentPuzzle === "3x3x3" ? "Switch to 2x2" : "Switch to 3x3";
+            document.getElementById("slice-buttons").style.display = 
+                currentPuzzle === "3x3x3" ? "flex" : "none";
+            document.getElementById("status").textContent = "Ready";
+            eel.set_cube_type(currentPuzzle)();
+
+        }
+
+        window.doMove = function(move) {
+            const actualMove = move.replace('_', "'");
+            moves.push(actualMove);
+            player.experimentalAddMove(actualMove);
+            document.getElementById("status").textContent = "Moves: " + moves.join(" ");
+        }
+
+        window.reset = function() {
+            cancelled = true;
+            moves = [];
+            player.alg = "";
+            player.jumpToEnd();
+            document.getElementById("status").textContent = "Ready";
+        }
+
+        window.solve = async function() {
+            document.getElementById("status").textContent = "Solving...";
+            cancelled = false;
+
+            const scrambleMoves = [...moves];  // save before anything else
+            
+            let solution = null;
+            for (let attempt = 0; attempt < 20; attempt++) {
+                solution = await eel.solve(moves)()
+                if (solution !== null) break;
+                document.getElementById("status").textContent = `Attempt ${attempt + 2}...`;
+            }
+            
+            if (solution === null) {
+                document.getElementById("status").textContent = "Could not solve";
+                return;
+            }
+            const solveMoves = solution.split(" ");
+            document.getElementById("status").textContent = `Solution (${solveMoves.length} moves): ${solution}`;
+            
+            for (const mv of solveMoves) {
+                if (cancelled) return;
+                moves.push(mv);
+                player.experimentalAddMove(mv);
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            moves = [];
+            player.alg = "";
+            document.getElementById("status").innerHTML = 
+                `Solved in ${solveMoves.length} moves<br>Scramble: ${scrambleMoves.join(" ")}<br>Solution: ${solution}`;
+        }
+        window.scramble = async function() {
+            cancelled = false;
+            moves = [];
+            player.alg = "";
+            player.tempoScale = 3;
+            const depth = parseInt(document.getElementById("scramble-depth").value);
+            const scrambleMoves = await eel.get_scramble(depth)();
+            for (const mv of scrambleMoves) {
+                if (cancelled) return;
+                moves.push(mv);
+                player.experimentalAddMove(mv);
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+            player.tempoScale = 1;
+            document.getElementById("status").textContent = "Moves: " + moves.join(" ");
+        }
+
+        window.applyMoveSequence = async function() {
+            player.tempoScale = 3;
+            const input = document.getElementById("move-input").value.trim();
+            if (!input) return;
+            const sequence = input.split(/\s+/);
+            for (const mv of sequence) {
+                moves.push(mv);
+                player.experimentalAddMove(mv);
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+            player.tempoScale = 1;
+            document.getElementById("status").textContent = "Moves: " + moves.join(" ");
+            document.getElementById("move-input").value = "";
+        }
+    </script>
+</body>
+</html>
